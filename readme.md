@@ -3,6 +3,6 @@
 - the code here (in `max_act_simple.py`) shows a simple pytorch implementation of this technique
 - this code includes simple regularization for this method
 - the file `max_act.py` contains more options
+- one example maximizing the class "peacock" for AlexNet: 
 
-
-- one example maximizing the class "peacock" for AlexNet: ![](ims/peacock.png)
+![](ims/peacock.png)
