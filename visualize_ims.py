@@ -34,6 +34,8 @@ def show(im, dpi=100, center_crop=False):
         plt.figure(figsize=(3 * len(im), 3), dpi=dpi)
         for i in range(len(im)):
             plt.subplot(1, len(im), i + 1)
+            im[i] = np.array(im[i])
+            im[i] = im[i].squeeze()
             plt.imshow(zero_one(im[i]))
             plt.grid(False)
             plt.axis('off')   

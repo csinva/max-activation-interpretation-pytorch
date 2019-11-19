@@ -4,28 +4,68 @@ from tqdm import tqdm
 import regularization
 from copy import deepcopy
 
+def maximize_im_simple(model, im, num_iters=int(1e3), lr=1e-2,
+                lambda_pnorm=0, lambda_tv=0,
+                device='cuda', save_freq=50, class_num=None):
+    '''
+    maximize im specified by pattern
+    
+    Returns
+    -------
+    ims_opt: list
+        list of optimized images
+    losses: list
+        loss for each image
+    '''
+    opt = torch.optim.SGD({im}, lr=lr) #, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
+    losses = np.zeros(num_iters + 1)
+    ims_opt = []
+    for i in (np.arange(num_iters) + 1):
+        model.zero_grad()
+        pred = model(im).squeeze() # forward pass
+        
+        # what we want to minimize
+        if class_num is None:
+            loss = -1 * pred.norm() # how large output is
+        else:
+            loss = -1 * pred[class_num].norm() # how large output is
+            
+        loss = loss + lambda_pnorm * im.norm(p=6) # p-norm (keeps any pixel from having too large a value)
+        loss = loss + lambda_tv * regularization.tv_norm_torch(im).item() # tv regularization
+        
+        # optimize
+        loss.backward(retain_graph=True)
+        opt.step()   
+        
+        # saving
+        losses[i] = loss.detach().item()
+        if i % save_freq == 0:
+            ims_opt.append(deepcopy(im.detach().cpu()))
 
-'''
-maximize image wrt to some objective
+    return ims_opt, losses
 
-args:
-    model - model to be maximized
-    im_shape - shape of input (should be something like 1 x 3 x H x W)
-    objective - 'pred' (maximizes pred) or 'diff' (maximizes diff between feats of two images)
-        output_weights - vector to dot with output (decides which classes to maximize)
-        im1 - im1 for diff
-        im2 - im2 for diff (visualize the vector which maximizes im2 - im1)
-
-returns:
-    ims_opt (list) - images
-    losses (list) - loss for each of the images
-'''
 def maximize_im(model, im_shape, 
                 objective='pred', output_weights=None, im1=None, im2=None, # objective
                 init='zero', num_iters=int(1e3), lr=1e-2, center_crop=False, # params
                 lambda_pnorm=0, lambda_tv=0, jitter=0, # regularization
                 device='cuda', save_freq=50, viz_online=False): # saving
+    '''maximize image wrt to some objective
 
+    Params
+    ------
+    model - model to be maximized
+    im_shape - shape of input (should be something like 1 x 3 x H x W)
+    objective - 'pred' (maximizes pred) or 'diff' (maximizes diff between feats of two images)
+    output_weights - vector to dot with output (decides which classes to maximize)
+    im1 - im1 for diff
+    im2 - im2 for diff (visualize the vector which maximizes im2 - im1)
+
+    Returns
+    -------
+    ims_opt (list) - images
+    losses (list) - loss for each of the images
+    '''
+    
     # initialize
     if init == 'zero':
         im = torch.zeros(im_shape, requires_grad=True, device=device)
@@ -91,41 +131,3 @@ def maximize_im(model, im_shape,
     return ims_opt, losses
 
 
-# maximize im specified by pattern
-# return list of optimized images along with loss for each image
-def maximize_im_simple(model, im, num_iters=int(1e3), lr=1e-2,
-                lambda_pnorm=0, lambda_tv=0,
-                device='cuda', save_freq=50, class_num=None):
-
-    opt = torch.optim.SGD({im}, lr=lr) #, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
-    losses = np.zeros(num_iters + 1)
-    ims_opt = []
-    for i in (np.arange(num_iters) + 1):
-        model.zero_grad()
-        pred = model(im).squeeze() # forward pass
-        
-        # what we want to minimize
-        if class_num is None:
-            loss = -1 * pred.norm() # how large output is
-        else:
-            loss = -1 * pred[class_num].norm() # how large output is
-            
-        loss = loss + lambda_pnorm * im.norm(p=6) # p-norm (keeps any pixel from having too large a value)
-        loss = loss + lambda_tv * regularization.tv_norm_torch(im).item() # tv regularization
-        
-        # optimize
-        loss.backward(retain_graph=True)
-        opt.step()   
-        
-        # saving
-        losses[i] = loss.detach().item()
-        if i % save_freq == 0:
-            ims_opt.append(deepcopy(im.detach().cpu()))
-
-    return ims_opt, losses
-
-if __name__ == '__main__':
-    device = 'cuda'
-    model = model.to(device)
-    im = torch.zeros(1, 3, 64, 64, requires_grad=True, device=device)
-    ims_opt, losses = maximize_im(model, im)
