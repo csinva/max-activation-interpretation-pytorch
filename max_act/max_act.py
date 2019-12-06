@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 from tqdm import tqdm
-import regularization
+from .regularization import *
 from copy import deepcopy
 
 def maximize_im_simple(model, im, num_iters=int(1e3), lr=1e-2,
@@ -31,7 +31,7 @@ def maximize_im_simple(model, im, num_iters=int(1e3), lr=1e-2,
             loss = -1 * pred[class_num].norm() # how large output is
             
         loss = loss + lambda_pnorm * im.norm(p=6) # p-norm (keeps any pixel from having too large a value)
-        loss = loss + lambda_tv * regularization.tv_norm_torch(im).item() # tv regularization
+        loss = loss + lambda_tv * tv_norm_torch(im).item() # tv regularization
         
         # optimize
         loss.backward(retain_graph=True)
@@ -92,7 +92,7 @@ def maximize_im(model, im_shape,
             loss = -1 * torch.dot(pred.flatten(), output_weights).norm()
         # regularization    
         loss = loss + lambda_pnorm * im.norm(p=6) # p-norm (keeps any pixel from having too large a value)
-        loss = loss + lambda_tv * regularization.tv_norm_torch(im) # regularization.tv_norm_torch_3d(im)
+        loss = loss + lambda_tv * tv_norm_torch(im) # regularization.tv_norm_torch_3d(im)
         
         # update
         losses[i] = loss.detach().item()
