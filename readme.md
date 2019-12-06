@@ -9,6 +9,8 @@
 
 ## sample usage
 
+- install with `pip install git+https://github.com/csinva/max-activation-interpretation-pytorch`
+
 ```python
 sys.path.append('../max_act')
 from max_act import maximize_im, maximize_im_simple
